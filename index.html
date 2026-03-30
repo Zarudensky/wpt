@@ -1,0 +1,2161 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <title>Word Pairs Trainer</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    :root {
+      --bg: #111827;
+      --panel: #1f2937;
+      --panel-2: #0f172a;
+      --card: #1f2937;
+      --card-border: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #58cc02;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --selected: #2563eb;
+      --record: #fbbf24;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      height: 100%;
+      overscroll-behavior: none;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 640px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(180deg, #0b1220 0%, #111827 100%);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(17, 24, 39, 0.95);
+      backdrop-filter: blur(8px);
+      padding: calc(env(safe-area-inset-top) + 12px) 16px 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .space-between {
+      justify-content: space-between;
+    }
+
+    .title {
+      font-size: 20px;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .progress-wrap {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .progress {
+      width: 100%;
+      height: 12px;
+      background: #243041;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #58cc02, #84cc16);
+      border-radius: inherit;
+      transition: width 220ms ease;
+    }
+
+    .timer {
+      font-weight: 800;
+      font-size: 16px;
+      min-width: 54px;
+      text-align: right;
+    }
+
+    main {
+      flex: 1;
+      padding: 14px 16px 94px;
+    }
+
+    .panel {
+      background: rgba(31, 41, 55, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: 0 14px 28px rgba(0,0,0,0.18);
+    }
+
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .settings-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .settings-inline-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .word-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .word-col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card {
+      min-height: 66px;
+      border-radius: 16px;
+      border: 2px solid var(--card-border);
+      background: linear-gradient(180deg, #1f2937, #18212f);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 18px;
+      padding: 14px 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 120ms ease, background-color 180ms ease, border-color 180ms ease, opacity 180ms ease;
+      cursor: pointer;
+    }
+
+    .card:active { transform: scale(0.98); }
+    .card.selected { border-color: var(--selected); background: #1d4ed8; }
+    .card.correct { border-color: var(--success); background: #15803d; }
+    .card.incorrect { border-color: var(--danger); background: #b91c1c; }
+    .card.hidden { visibility: hidden; pointer-events: none; }
+    .card.disabled { opacity: 0.65; pointer-events: none; }
+    .card.incoming { animation: incoming-pop 240ms ease; }
+
+    @keyframes incoming-pop {
+      0% { transform: scale(0.92); opacity: 0.35; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .btn {
+      border: none;
+      background: var(--accent);
+      color: #06280a;
+      font-weight: 800;
+      border-radius: 16px;
+      min-height: 52px;
+      padding: 0 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .btn.secondary {
+      background: #334155;
+      color: var(--text);
+    }
+
+    .btn.danger {
+      background: #7f1d1d;
+      color: white;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: #233041;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .muted { color: var(--muted); }
+    .small { font-size: 13px; }
+    .tiny { font-size: 12px; }
+    .section-title {
+      margin: 0 0 8px;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .item {
+      border-radius: 16px;
+      background: #182536;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      padding: 12px;
+    }
+
+    .item h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .item p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .summary-card {
+      border-radius: 18px;
+      background: #182536;
+      border: 1px solid rgba(96, 165, 250, 0.18);
+      padding: 14px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+
+    .summary-card h3 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .summary-card p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    input, select {
+      width: 100%;
+      min-height: 48px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: #0f172a;
+      color: var(--text);
+      padding: 0 40px 0 14px;
+      font-size: 15px;
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-position: right 14px center;
+      background-size: 18px 18px;
+      background-repeat: no-repeat;
+      padding-right: 44px;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 0;
+      width: 100%;
+      max-width: 640px;
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+      padding: 8px 10px calc(env(safe-area-inset-bottom) + 10px);
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .nav-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 14px;
+      min-height: 52px;
+      min-width: 0;
+      padding: 6px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .nav-btn.active {
+      background: #18212f;
+      color: var(--accent);
+    }
+
+    .icon {
+      width: 22px;
+      height: 22px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .banner {
+      border: 1px solid rgba(245, 158, 11, 0.28);
+      background: rgba(120, 53, 15, 0.28);
+      border-radius: 16px;
+      padding: 12px;
+      color: #fde68a;
+      font-size: 13px;
+    }
+
+    .record-banner {
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      background: #2d2413;
+      color: #fde68a;
+      animation: record-glow 1.4s ease-in-out infinite alternate;
+    }
+
+    .best-result-panel {
+      border: 1px solid rgba(96, 165, 250, 0.24);
+      background: #162334;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+    }
+
+    .best-result-panel .section-title {
+      color: #dbeafe;
+    }
+
+    .best-result-panel .item,
+    .best-result-panel .summary-card,
+    .best-result-panel .stat {
+      background: rgba(11, 18, 32, 0.48);
+      border-color: rgba(96, 165, 250, 0.16);
+    }
+
+    @keyframes record-glow {
+      from { box-shadow: 0 0 0 rgba(251, 191, 36, 0.12); }
+      to { box-shadow: 0 0 18px rgba(251, 191, 36, 0.28); }
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.62);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 50;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      width: 100%;
+      max-width: 420px;
+      background: #111827;
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .modal h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .stat {
+      background: #182536;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 16px;
+      padding: 12px;
+    }
+
+    .stat .k {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .stat .v {
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .empty {
+      padding: 18px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed rgba(148, 163, 184, 0.22);
+      border-radius: 16px;
+    }
+
+    .hr {
+      height: 1px;
+      background: rgba(148, 163, 184, 0.12);
+      margin: 4px 0;
+    }
+
+    .record-modal {
+      border-color: rgba(251, 191, 36, 0.4);
+      background:
+        radial-gradient(circle at top, rgba(251, 191, 36, 0.12), transparent 40%),
+        #111827;
+      animation: record-modal-pop 320ms ease;
+    }
+
+    @keyframes record-modal-pop {
+      0% { transform: scale(0.92); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .record-badge {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      background: radial-gradient(circle, rgba(251, 191, 36, 0.28), rgba(146, 64, 14, 0.18));
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      color: #fde68a;
+    }
+
+    .record-badge svg {
+      width: 36px;
+      height: 36px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .confetti {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .confetti span {
+      position: absolute;
+      top: -12px;
+      width: 8px;
+      height: 16px;
+      border-radius: 999px;
+      opacity: 0.9;
+      animation: confetti-fall 1.8s linear infinite;
+    }
+
+    @keyframes confetti-fall {
+      0% { transform: translateY(-10px) rotate(0deg); opacity: 0; }
+      10% { opacity: 1; }
+      100% { transform: translateY(320px) rotate(320deg); opacity: 0; }
+    }
+
+    .confetti span:nth-child(1) { left: 8%; background: #fbbf24; animation-delay: 0s; }
+    .confetti span:nth-child(2) { left: 18%; background: #22c55e; animation-delay: 0.2s; }
+    .confetti span:nth-child(3) { left: 29%; background: #60a5fa; animation-delay: 0.45s; }
+    .confetti span:nth-child(4) { left: 42%; background: #f472b6; animation-delay: 0.1s; }
+    .confetti span:nth-child(5) { left: 56%; background: #fbbf24; animation-delay: 0.35s; }
+    .confetti span:nth-child(6) { left: 68%; background: #34d399; animation-delay: 0.55s; }
+    .confetti span:nth-child(7) { left: 79%; background: #a78bfa; animation-delay: 0.15s; }
+    .confetti span:nth-child(8) { left: 90%; background: #fb7185; animation-delay: 0.5s; }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+
+    .nav-label {
+      width: 100%;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.15;
+    }
+
+    .item-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .item-content {
+      flex: 1 1 180px;
+      min-width: 0;
+    }
+
+    .item-actions {
+      display: flex;
+      flex: 1 1 220px;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      min-width: 0;
+      margin-top: 10px;
+    }
+
+    .item-actions .btn {
+      flex: 1 1 132px;
+      min-width: 0;
+    }
+
+    .page-header {
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .page-header .btn {
+      flex: 0 0 auto;
+    }
+
+    @media (max-width: 480px) {
+      main {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .panel {
+        padding: 12px;
+      }
+
+      .item-actions {
+        width: 100%;
+        justify-content: stretch;
+      }
+
+      .item-actions .btn {
+        flex: 1 1 calc(50% - 4px);
+      }
+    }
+
+    @media (max-width: 390px) {
+      .bottom-nav {
+        gap: 6px;
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+
+      .nav-btn {
+        font-size: 10px;
+        min-height: 50px;
+      }
+
+      .icon,
+      .icon svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .item-actions .btn {
+        flex-basis: 100%;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .card { font-size: 16px; min-height: 62px; }
+      .title { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar" id="topbar"></div>
+    <main id="main"></main>
+    <nav class="bottom-nav" id="bottomNav"></nav>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'word_pairs_app_v6';
+    const DEFAULT_SESSION_SECONDS = 120;
+    const BOARD_TARGET_SIZE = 5;
+    const BATCH_REPLACEMENT_SIZE = 2;
+
+    const defaultGroups = [
+      {
+        id: crypto.randomUUID(),
+        name: 'Робота',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Побут',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Подорожі',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Комунікація',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+      {
+        id: crypto.randomUUID(),
+        name: 'Базові слова',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }
+    ];
+
+    const defaultPairs = [
+      ['молоток', 'hammer', defaultGroups[0].id],
+      ['пилка', 'saw', defaultGroups[0].id],
+      ['цвях', 'nail', defaultGroups[0].id],
+      ['рукавички', 'gloves', defaultGroups[0].id],
+      ['каска', 'helmet', defaultGroups[0].id],
+      ['драбина', 'ladder', defaultGroups[0].id],
+      ['бетон', 'concrete', defaultGroups[0].id],
+      ['пінопласт', 'foam', defaultGroups[0].id],
+      ['деревина', 'lumber', defaultGroups[0].id],
+      ['рівень', 'level', defaultGroups[0].id],
+      ['викрутка', 'screwdriver', defaultGroups[0].id],
+      ['дриль', 'drill', defaultGroups[0].id],
+      ['рулетка', 'tape measure', defaultGroups[0].id],
+      ['лопата', 'shovel', defaultGroups[0].id],
+      ['відро', 'bucket', defaultGroups[0].id],
+      ['гайковий ключ', 'wrench', defaultGroups[0].id],
+      ['плоскогубці', 'pliers', defaultGroups[0].id],
+      ['ножівка', 'hacksaw', defaultGroups[0].id],
+      ['сокира', 'axe', defaultGroups[0].id],
+      ['кельма', 'trowel', defaultGroups[0].id],
+      ['циркулярка', 'circular saw', defaultGroups[0].id],
+      ['валик', 'paint roller', defaultGroups[0].id],
+      ['пензель', 'paintbrush', defaultGroups[0].id],
+      ['цегла', 'brick', defaultGroups[0].id],
+      ['штукатурка', 'plaster', defaultGroups[0].id],
+      ['ізоляція', 'insulation', defaultGroups[0].id],
+      ['саморіз', 'screw', defaultGroups[0].id],
+      ['болт', 'bolt', defaultGroups[0].id],
+      ['гайка', 'nut', defaultGroups[0].id],
+      ['шайба', 'washer', defaultGroups[0].id],
+      ['дошка', 'board', defaultGroups[0].id],
+      ['фанера', 'plywood', defaultGroups[0].id],
+      ['драбинка', 'step ladder', defaultGroups[0].id],
+      ['вимірювач', 'measuring tool', defaultGroups[0].id],
+      ['шнур', 'cord', defaultGroups[0].id],
+      ['подовжувач', 'extension cord', defaultGroups[0].id],
+      ['тачка', 'wheelbarrow', defaultGroups[0].id],
+      ['мішок', 'bag', defaultGroups[0].id],
+      ['маска', 'mask', defaultGroups[0].id],
+      ['окуляри', 'goggles', defaultGroups[0].id],
+      ['жилет', 'vest', defaultGroups[0].id],
+      ['черевики', 'boots', defaultGroups[0].id],
+      ['лопатка', 'putty knife', defaultGroups[0].id],
+      ['шліфмашина', 'sander', defaultGroups[0].id],
+      ['фарба', 'paint', defaultGroups[0].id],
+      ['цемент', 'cement', defaultGroups[0].id],
+      ['клей', 'adhesive', defaultGroups[0].id],
+      ['герметик', 'sealant', defaultGroups[0].id],
+      ['сходи', 'stairs', defaultGroups[0].id],
+      ['стеля', 'ceiling', defaultGroups[0].id],
+      ['стілець', 'chair', defaultGroups[1].id],
+      ['стіл', 'table', defaultGroups[1].id],
+      ['вікно', 'window', defaultGroups[1].id],
+      ['двері', 'door', defaultGroups[1].id],
+      ['лампа', 'lamp', defaultGroups[1].id],
+      ['кухня', 'kitchen', defaultGroups[1].id],
+      ['рушник', 'towel', defaultGroups[1].id],
+      ['дзеркало', 'mirror', defaultGroups[1].id],
+      ['ліжко', 'bed', defaultGroups[1].id],
+      ['підлога', 'floor', defaultGroups[1].id],
+      ['шафа', 'wardrobe', defaultGroups[1].id],
+      ['подушка', 'pillow', defaultGroups[1].id],
+      ['ковдра', 'blanket', defaultGroups[1].id],
+      ['тарілка', 'plate', defaultGroups[1].id],
+      ['чашка', 'cup', defaultGroups[1].id],
+      ['ложка', 'spoon', defaultGroups[1].id],
+      ['виделка', 'fork', defaultGroups[1].id],
+      ['ніж', 'knife', defaultGroups[1].id],
+      ['холодильник', 'fridge', defaultGroups[1].id],
+      ['морозильник', 'freezer', defaultGroups[1].id],
+      ['плита', 'stove', defaultGroups[1].id],
+      ['духовка', 'oven', defaultGroups[1].id],
+      ['мийка', 'sink', defaultGroups[1].id],
+      ['кран', 'faucet', defaultGroups[1].id],
+      ['мило', 'soap', defaultGroups[1].id],
+      ['шампунь', 'shampoo', defaultGroups[1].id],
+      ['щітка', 'brush', defaultGroups[1].id],
+      ['гребінець', 'comb', defaultGroups[1].id],
+      ['диван', 'sofa', defaultGroups[1].id],
+      ['крісло', 'armchair', defaultGroups[1].id],
+      ['полиця', 'shelf', defaultGroups[1].id],
+      ['килим', 'carpet', defaultGroups[1].id],
+      ['штора', 'curtain', defaultGroups[1].id],
+      ['пральна машина', 'washing machine', defaultGroups[1].id],
+      ['сушарка', 'dryer', defaultGroups[1].id],
+      ['праска', 'iron', defaultGroups[1].id],
+      ['кошик', 'basket', defaultGroups[1].id],
+      ['відро для сміття', 'trash can', defaultGroups[1].id],
+      ['серветка', 'napkin', defaultGroups[1].id],
+      ['склянка', 'glass', defaultGroups[1].id],
+      ['чайник', 'kettle', defaultGroups[1].id],
+      ['тостер', 'toaster', defaultGroups[1].id],
+      ['мікрохвильовка', 'microwave', defaultGroups[1].id],
+      ['вентилятор', 'fan', defaultGroups[1].id],
+      ['обігрівач', 'heater', defaultGroups[1].id],
+      ['вимикач', 'switch', defaultGroups[1].id],
+      ['розетка', 'socket', defaultGroups[1].id],
+      ['коридор', 'hallway', defaultGroups[1].id],
+      ['балкон', 'balcony', defaultGroups[1].id],
+      ['стіна', 'wall', defaultGroups[1].id],
+      ['аеропорт', 'airport', defaultGroups[2].id],
+      ['літак', 'plane', defaultGroups[2].id],
+      ['квиток', 'ticket', defaultGroups[2].id],
+      ['паспорт', 'passport', defaultGroups[2].id],
+      ['віза', 'visa', defaultGroups[2].id],
+      ['рейс', 'flight', defaultGroups[2].id],
+      ['багаж', 'luggage', defaultGroups[2].id],
+      ['валіза', 'suitcase', defaultGroups[2].id],
+      ['реєстрація', 'check-in', defaultGroups[2].id],
+      ['вихід', 'gate', defaultGroups[2].id],
+      ['прибуття', 'arrival', defaultGroups[2].id],
+      ['відправлення', 'departure', defaultGroups[2].id],
+      ['готель', 'hotel', defaultGroups[2].id],
+      ['кімната', 'room', defaultGroups[2].id],
+      ['бронювання', 'booking', defaultGroups[2].id],
+      ['рецепція', 'reception', defaultGroups[2].id],
+      ['ліфт', 'elevator', defaultGroups[2].id],
+      ['поверх', 'floor', defaultGroups[2].id],
+      ['місто', 'city', defaultGroups[2].id],
+      ['вулиця', 'street', defaultGroups[2].id],
+      ['карта', 'map', defaultGroups[2].id],
+      ['навігація', 'navigation', defaultGroups[2].id],
+      ['таксі', 'taxi', defaultGroups[2].id],
+      ['автобус', 'bus', defaultGroups[2].id],
+      ['поїзд', 'train', defaultGroups[2].id],
+      ['станція', 'station', defaultGroups[2].id],
+      ['оренда', 'rent', defaultGroups[2].id],
+      ['авто', 'car', defaultGroups[2].id],
+      ['водій', 'driver', defaultGroups[2].id],
+      ['дорога', 'road', defaultGroups[2].id],
+      ['перехрестя', 'intersection', defaultGroups[2].id],
+      ['поворот', 'turn', defaultGroups[2].id],
+      ['прямо', 'straight', defaultGroups[2].id],
+      ['ліворуч', 'left', defaultGroups[2].id],
+      ['праворуч', 'right', defaultGroups[2].id],
+      ['швидкість', 'speed', defaultGroups[2].id],
+      ['обмеження', 'limit', defaultGroups[2].id],
+      ['зупинка', 'stop', defaultGroups[2].id],
+      ['парковка', 'parking', defaultGroups[2].id],
+      ['квитанція', 'receipt', defaultGroups[2].id],
+      ['гроші', 'money', defaultGroups[2].id],
+      ['обмін', 'exchange', defaultGroups[2].id],
+      ['банк', 'bank', defaultGroups[2].id],
+      ['документи', 'documents', defaultGroups[2].id],
+      ['митниця', 'customs', defaultGroups[2].id],
+      ['контроль', 'control', defaultGroups[2].id],
+      ['подорож', 'travel', defaultGroups[2].id],
+      ['відпустка', 'vacation', defaultGroups[2].id],
+      ['турист', 'tourist', defaultGroups[2].id],
+      ['маршрут', 'route', defaultGroups[2].id],
+      ['говорити', 'speak', defaultGroups[3].id],
+      ['слухати', 'listen', defaultGroups[3].id],
+      ['чути', 'hear', defaultGroups[3].id],
+      ['бачити', 'see', defaultGroups[3].id],
+      ['дивитися', 'watch', defaultGroups[3].id],
+      ['читати', 'read', defaultGroups[3].id],
+      ['писати', 'write', defaultGroups[3].id],
+      ['сказати', 'say', defaultGroups[3].id],
+      ['відповісти', 'answer', defaultGroups[3].id],
+      ['питання', 'question', defaultGroups[3].id],
+      ['слово', 'word', defaultGroups[3].id],
+      ['речення', 'sentence', defaultGroups[3].id],
+      ['мова', 'language', defaultGroups[3].id],
+      ['розмова', 'conversation', defaultGroups[3].id],
+      ['телефон', 'phone', defaultGroups[3].id],
+      ['дзвінок', 'call', defaultGroups[3].id],
+      ['повідомлення', 'message', defaultGroups[3].id],
+      ['лист', 'letter', defaultGroups[3].id],
+      ['електронна пошта', 'email', defaultGroups[3].id],
+      ['зустріч', 'meeting', defaultGroups[3].id],
+      ['обговорення', 'discussion', defaultGroups[3].id],
+      ['ідея', 'idea', defaultGroups[3].id],
+      ['думка', 'thought', defaultGroups[3].id],
+      ['пояснити', 'explain', defaultGroups[3].id],
+      ['запитати', 'ask', defaultGroups[3].id],
+      ['відповідь', 'reply', defaultGroups[3].id],
+      ['зрозуміти', 'understand', defaultGroups[3].id],
+      ['помилка', 'mistake', defaultGroups[3].id],
+      ['правильно', 'correct', defaultGroups[3].id],
+      ['неправильно', 'wrong', defaultGroups[3].id],
+      ['важливо', 'important', defaultGroups[3].id],
+      ['просто', 'simple', defaultGroups[3].id],
+      ['складно', 'difficult', defaultGroups[3].id],
+      ['швидко', 'fast', defaultGroups[3].id],
+      ['повільно', 'slow', defaultGroups[3].id],
+      ['голосно', 'loud', defaultGroups[3].id],
+      ['тихо', 'quiet', defaultGroups[3].id],
+      ['чітко', 'clear', defaultGroups[3].id],
+      ['незрозуміло', 'unclear', defaultGroups[3].id],
+      ['повторити', 'repeat', defaultGroups[3].id],
+      ['перекласти', 'translate', defaultGroups[3].id],
+      ['слухач', 'listener', defaultGroups[3].id],
+      ['співрозмовник', 'speaker', defaultGroups[3].id],
+      ['діалог', 'dialogue', defaultGroups[3].id],
+      ['контакт', 'contact', defaultGroups[3].id],
+      ['зв’язок', 'connection', defaultGroups[3].id],
+      ['інформація', 'information', defaultGroups[3].id],
+      ['дані', 'data', defaultGroups[3].id],
+      ['знання', 'knowledge', defaultGroups[3].id],
+      ['приклад', 'example', defaultGroups[3].id],
+      ['я', 'I', defaultGroups[4].id],
+      ['ти', 'you', defaultGroups[4].id],
+      ['він', 'he', defaultGroups[4].id],
+      ['вона', 'she', defaultGroups[4].id],
+      ['воно', 'it', defaultGroups[4].id],
+      ['ми', 'we', defaultGroups[4].id],
+      ['вони', 'they', defaultGroups[4].id],
+      ['це', 'this', defaultGroups[4].id],
+      ['той', 'that', defaultGroups[4].id],
+      ['тут', 'here', defaultGroups[4].id],
+      ['там', 'there', defaultGroups[4].id],
+      ['де', 'where', defaultGroups[4].id],
+      ['що', 'what', defaultGroups[4].id],
+      ['хто', 'who', defaultGroups[4].id],
+      ['коли', 'when', defaultGroups[4].id],
+      ['чому', 'why', defaultGroups[4].id],
+      ['як', 'how', defaultGroups[4].id],
+      ['так', 'yes', defaultGroups[4].id],
+      ['ні', 'no', defaultGroups[4].id],
+      ['можливо', 'maybe', defaultGroups[4].id],
+      ['зараз', 'now', defaultGroups[4].id],
+      ['потім', 'later', defaultGroups[4].id],
+      ['завжди', 'always', defaultGroups[4].id],
+      ['ніколи', 'never', defaultGroups[4].id],
+      ['іноді', 'sometimes', defaultGroups[4].id],
+      ['дуже', 'very', defaultGroups[4].id],
+      ['багато', 'many', defaultGroups[4].id],
+      ['мало', 'few', defaultGroups[4].id],
+      ['великий', 'big', defaultGroups[4].id],
+      ['малий', 'small', defaultGroups[4].id],
+      ['новий', 'new', defaultGroups[4].id],
+      ['старий', 'old', defaultGroups[4].id],
+      ['добрий', 'good', defaultGroups[4].id],
+      ['поганий', 'bad', defaultGroups[4].id],
+      ['кращий', 'better', defaultGroups[4].id],
+      ['гірший', 'worse', defaultGroups[4].id],
+      ['день', 'day', defaultGroups[4].id],
+      ['ніч', 'night', defaultGroups[4].id],
+      ['час', 'time', defaultGroups[4].id],
+      ['рік', 'year', defaultGroups[4].id],
+      ['людина', 'person', defaultGroups[4].id],
+      ['робота', 'work', defaultGroups[4].id],
+      ['життя', 'life', defaultGroups[4].id],
+      ['світ', 'world', defaultGroups[4].id],
+      ['друг', 'friend', defaultGroups[4].id],
+      ['сім’я', 'family', defaultGroups[4].id],
+      ['дім', 'home', defaultGroups[4].id],
+      ['місце', 'place', defaultGroups[4].id],
+      ['річ', 'thing', defaultGroups[4].id],
+      ['справа', 'matter', defaultGroups[4].id],
+    ].map(([ua, en, groupId]) => ({
+      id: crypto.randomUUID(),
+      groupId,
+      ua,
+      en,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      isActive: true,
+    }));
+
+    const state = loadState();
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            view: parsed.view || 'training',
+            groups: parsed.groups || defaultGroups,
+            pairs: parsed.pairs || defaultPairs,
+            results: parsed.results || [],
+            settings: Object.assign({
+              sessionSeconds: 120,
+              stageTargets: [15, 20, 25],
+              soundEnabled: true,
+              selectedGroupId: (parsed.groups && parsed.groups[0] && parsed.groups[0].id) || defaultGroups[0].id,
+            }, parsed.settings || {}),
+            training: createTrainingState(
+              (parsed.settings && parsed.settings.sessionSeconds) || DEFAULT_SESSION_SECONDS
+            ),
+            ui: {
+              modal: null,
+              settingsGroupId: parsed.ui?.settingsGroupId || null,
+              lastRecordResultId: parsed.ui?.lastRecordResultId || null,
+            },
+          };
+        }
+      } catch (error) {
+        console.error('loadState error', error);
+      }
+      return {
+        view: 'training',
+        groups: defaultGroups,
+        pairs: defaultPairs,
+        results: [],
+        settings: {
+          sessionSeconds: 120,
+          stageTargets: [15, 20, 25],
+          soundEnabled: true,
+          selectedGroupId: defaultGroups[0].id,
+        },
+        training: createTrainingState(DEFAULT_SESSION_SECONDS),
+        ui: { modal: null, settingsGroupId: null, lastRecordResultId: null },
+      };
+    }
+
+    function persistState() {
+      const payload = {
+        view: state.view,
+        groups: state.groups,
+        pairs: state.pairs,
+        results: state.results,
+        settings: state.settings,
+        ui: {
+          settingsGroupId: state.ui.settingsGroupId,
+          lastRecordResultId: state.ui.lastRecordResultId,
+        }
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    }
+
+    function createTrainingState(sessionSeconds = DEFAULT_SESSION_SECONDS) {
+      return {
+        running: false,
+        stageIndex: 0,
+        stageCorrect: 0,
+        totalCorrect: 0,
+        wrongAttempts: 0,
+        selectedLeftId: null,
+        selectedRightId: null,
+        leftCards: [],
+        rightCards: [],
+        queue: [],
+        startTime: null,
+        stageStartTime: null,
+        timeLeft: sessionSeconds,
+        timerId: null,
+        groupId: null,
+        paused: false,
+        pendingMatchedIds: [],
+      };
+    }
+
+    function saveAndRender() {
+      persistState();
+      render();
+    }
+
+    function shuffle(array) {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function formatTime(seconds) {
+      const s = Math.max(0, Math.floor(seconds));
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
+    }
+
+    function groupPairs(groupId) {
+      return state.pairs.filter((pair) => pair.groupId === groupId && pair.isActive);
+    }
+
+    function ensureSelectedGroup() {
+      if (!state.groups.some((group) => group.id === state.settings.selectedGroupId)) {
+        state.settings.selectedGroupId = state.groups[0]?.id || null;
+      }
+    }
+
+    function openModal(content) {
+      state.ui.modal = content;
+      renderModal();
+    }
+
+    function closeModal() {
+      state.ui.modal = null;
+      renderModal();
+    }
+
+    function beep(type) {
+      if (!state.settings.soundEnabled) return;
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      const audioContext = beep.ctx || (beep.ctx = new AudioContextClass());
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.type = type === 'record' ? 'triangle' : 'sine';
+
+      const start = audioContext.currentTime;
+      if (type === 'success') {
+        oscillator.frequency.setValueAtTime(880, start);
+      } else if (type === 'record') {
+        oscillator.frequency.setValueAtTime(740, start);
+        oscillator.frequency.exponentialRampToValueAtTime(880, start + 0.12);
+        oscillator.frequency.exponentialRampToValueAtTime(1175, start + 0.28);
+      } else {
+        oscillator.frequency.setValueAtTime(220, start);
+      }
+
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.12, start + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + (type === 'record' ? 0.34 : type === 'success' ? 0.18 : 0.22));
+      oscillator.start(start);
+      oscillator.stop(start + (type === 'record' ? 0.36 : type === 'success' ? 0.2 : 0.24));
+    }
+
+    function startTraining() {
+      ensureSelectedGroup();
+      const groupId = state.settings.selectedGroupId;
+      const pairs = groupPairs(groupId);
+      if (pairs.length < 10) {
+        openModal({
+          type: 'info',
+          title: 'Недостатньо слів',
+          message: 'Для старту потрібно щонайменше 10 пар у вибраній групі.',
+          actions: [{ label: 'Ок', variant: 'secondary', onClick: closeModal }],
+        });
+        return;
+      }
+
+      stopTimer();
+      state.training = createTrainingState(state.settings.sessionSeconds);
+      state.training.running = true;
+      state.training.groupId = groupId;
+      state.training.queue = shuffle(pairs);
+      state.training.timeLeft = state.settings.sessionSeconds;
+      state.training.startTime = Date.now();
+      state.training.stageStartTime = Date.now();
+      seedBoard();
+      render();
+      startTimer();
+    }
+
+    function getBestResultForGroup(groupId, excludeId = null) {
+      return state.results
+        .filter((item) => item.groupId === groupId && item.id !== excludeId)
+        .sort((a, b) => compareResults(b, a))[0] || null;
+    }
+
+    function buildResult(training, reason = 'finished') {
+      const elapsed = training.startTime ? Math.round((Date.now() - training.startTime) / 1000) : 0;
+      const accuracy = training.totalCorrect + training.wrongAttempts > 0
+        ? Math.round((training.totalCorrect / (training.totalCorrect + training.wrongAttempts)) * 100)
+        : 0;
+      const group = state.groups.find((item) => item.id === training.groupId);
+      const avgSpeed = training.totalCorrect > 0 ? Number((elapsed / training.totalCorrect).toFixed(2)) : 0;
+
+      return {
+        id: crypto.randomUUID(),
+        groupId: training.groupId,
+        groupNameSnapshot: group?.name || 'Без назви',
+        stageReached: Math.min(training.stageIndex + 1, state.settings.stageTargets.length),
+        correctPairs: training.totalCorrect,
+        wrongAttempts: training.wrongAttempts,
+        accuracy,
+        timeSpentSec: elapsed,
+        timeLeftSec: Math.max(0, Math.floor(training.timeLeft)),
+        avgSecondsPerAnswer: avgSpeed,
+        completedAt: Date.now(),
+        endReason: reason,
+        stageTargets: [...state.settings.stageTargets],
+        sessionSeconds: state.settings.sessionSeconds,
+      };
+    }
+
+    function compareResults(a, b) {
+      if (a.correctPairs !== b.correctPairs) return a.correctPairs - b.correctPairs;
+      if (a.accuracy !== b.accuracy) return a.accuracy - b.accuracy;
+      if (a.avgSecondsPerAnswer !== b.avgSecondsPerAnswer) return b.avgSecondsPerAnswer - a.avgSecondsPerAnswer;
+      if (a.timeLeftSec !== b.timeLeftSec) return a.timeLeftSec - b.timeLeftSec;
+      return 0;
+    }
+
+    function stopTrainingAndStore(reason = 'finished') {
+      stopTimer();
+      const training = state.training;
+      if (!training.running && training.totalCorrect === 0 && training.wrongAttempts === 0) {
+        return;
+      }
+
+      const result = buildResult(training, reason);
+      const previousBest = getBestResultForGroup(result.groupId);
+      const isNewRecord = result.correctPairs > 0 && (!previousBest || compareResults(result, previousBest) > 0);
+
+      state.results.unshift(result);
+      state.training = createTrainingState(state.settings.sessionSeconds);
+      state.view = 'results';
+      state.ui.lastRecordResultId = isNewRecord ? result.id : null;
+      saveAndRender();
+
+      if (isNewRecord) {
+        beep('record');
+        openModal({
+          type: 'recordCelebration',
+          title: 'Новий рекорд!',
+          message: `Ти встановив новий рекорд у групі "${result.groupNameSnapshot}".`,
+          result,
+        });
+      }
+    }
+
+    function startTimer() {
+      stopTimer();
+      state.training.timerId = setInterval(() => {
+        if (!state.training.running || state.training.paused) return;
+        state.training.timeLeft -= 1;
+        if (state.training.timeLeft <= 0) {
+          state.training.timeLeft = 0;
+          render();
+          stopTrainingAndStore('timeout');
+          return;
+        }
+        renderTopbar();
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (state.training.timerId) {
+        clearInterval(state.training.timerId);
+        state.training.timerId = null;
+      }
+    }
+
+    function seedBoard() {
+      const visible = [];
+      while (visible.length < BOARD_TARGET_SIZE && state.training.queue.length > 0) {
+        visible.push(state.training.queue.shift());
+      }
+      state.training.leftCards = shuffle(visible.map((pair) => ({ id: pair.id, text: pair.ua, side: 'left', status: 'default' })));
+      const rightSource = shuffleAvoidAligned(visible, visible.map((pair) => pair.id));
+      state.training.rightCards = rightSource.map((pair) => ({ id: pair.id, text: pair.en, side: 'right', status: 'default' }));
+      state.training.pendingMatchedIds = [];
+    }
+
+    function shuffleAvoidAligned(visiblePairs, leftOrderIds = null) {
+      if (visiblePairs.length <= 1) return [...visiblePairs];
+      const referenceIds = leftOrderIds || visiblePairs.map((pair) => pair.id);
+      let tries = 0;
+      let shuffled = shuffle(visiblePairs);
+      while (tries < 30 && shuffled.some((pair, index) => pair.id === referenceIds[index])) {
+        shuffled = shuffle(visiblePairs);
+        tries += 1;
+      }
+      return shuffled;
+    }
+
+    function refillBoard(matchedIds = []) {
+      if (!matchedIds.length) return;
+      const leftReplacements = [];
+      const rightReplacements = [];
+
+      for (const matchedId of matchedIds) {
+        const leftIndex = state.training.leftCards.findIndex((card) => card.id === matchedId);
+        const rightIndex = state.training.rightCards.findIndex((card) => card.id === matchedId);
+        if (leftIndex === -1 || rightIndex === -1) continue;
+
+        const nextPair = state.training.queue.shift() || null;
+        leftReplacements.push({ matchedId, index: leftIndex, pair: nextPair });
+        rightReplacements.push({ matchedId, index: rightIndex, pair: nextPair });
+      }
+
+      for (const replacement of leftReplacements) {
+        if (!replacement.pair) {
+          state.training.leftCards[replacement.index] = {
+            id: `hidden-left-${replacement.index}`,
+            text: '',
+            side: 'left',
+            status: 'hidden',
+          };
+          continue;
+        }
+
+        state.training.leftCards[replacement.index] = {
+          id: replacement.pair.id,
+          text: replacement.pair.ua,
+          side: 'left',
+          status: 'incoming',
+        };
+      }
+
+      const pendingRightPairs = rightReplacements.filter((item) => item.pair).map((item) => item.pair);
+      const leftOrderIds = state.training.leftCards.map((card) => card.id);
+      const shuffledRightPairs = shuffleAvoidAligned(pendingRightPairs, rightReplacements.filter((item) => item.pair).map((item) => leftOrderIds[item.index]));
+      let rightPairIndex = 0;
+
+      for (const replacement of rightReplacements) {
+        if (!replacement.pair) {
+          state.training.rightCards[replacement.index] = {
+            id: `hidden-right-${replacement.index}`,
+            text: '',
+            side: 'right',
+            status: 'hidden',
+          };
+          continue;
+        }
+
+        const pair = shuffledRightPairs[rightPairIndex];
+        rightPairIndex += 1;
+
+        state.training.rightCards[replacement.index] = {
+          id: pair.id,
+          text: pair.en,
+          side: 'right',
+          status: 'incoming',
+        };
+      }
+
+      requestAnimationFrame(() => {
+        for (const card of state.training.leftCards) {
+          if (card.status === 'incoming') card.status = 'default';
+        }
+        for (const card of state.training.rightCards) {
+          if (card.status === 'incoming') card.status = 'default';
+        }
+        render();
+      });
+
+      state.training.selectedLeftId = null;
+      state.training.selectedRightId = null;
+      state.training.pendingMatchedIds = [];
+    }
+
+    function handleCardClick(side, id) {
+      const training = state.training;
+      if (!training.running || training.paused) return;
+      const collection = side === 'left' ? training.leftCards : training.rightCards;
+      const card = collection.find((item) => item.id === id);
+      if (!card || card.status === 'hidden' || card.status === 'disabled' || card.status === 'correct') return;
+
+      if (side === 'left') {
+        training.selectedLeftId = training.selectedLeftId === id ? null : id;
+      } else {
+        training.selectedRightId = training.selectedRightId === id ? null : id;
+      }
+
+      markSelection();
+      render();
+
+      if (training.selectedLeftId && training.selectedRightId) {
+        checkPair();
+      }
+    }
+
+    function markSelection() {
+      for (const card of state.training.leftCards) {
+        if (card.status === 'correct' || card.status === 'hidden') continue;
+        card.status = card.id === state.training.selectedLeftId ? 'selected' : 'default';
+      }
+      for (const card of state.training.rightCards) {
+        if (card.status === 'correct' || card.status === 'hidden') continue;
+        card.status = card.id === state.training.selectedRightId ? 'selected' : 'default';
+      }
+    }
+
+    function clearPendingSelection() {
+      state.training.selectedLeftId = null;
+      state.training.selectedRightId = null;
+      for (const card of state.training.leftCards) {
+        if (card.status === 'selected') card.status = 'default';
+      }
+      for (const card of state.training.rightCards) {
+        if (card.status === 'selected') card.status = 'default';
+      }
+    }
+
+    function isBoardEmpty() {
+      return state.training.leftCards.every((card) => card.status === 'hidden');
+    }
+
+    function finalizeMatchedBatch(force = false) {
+      const training = state.training;
+      if (!training.pendingMatchedIds.length) return;
+
+      const boardIsEmptyBeforeRefill = isBoardEmpty();
+      const shouldReplaceNow =
+        force ||
+        training.pendingMatchedIds.length >= BATCH_REPLACEMENT_SIZE ||
+        boardIsEmptyBeforeRefill;
+
+      if (!shouldReplaceNow) return;
+
+      const matchedIds = [...training.pendingMatchedIds];
+      refillBoard(matchedIds);
+
+      const target = state.settings.stageTargets[training.stageIndex];
+      if (training.stageCorrect >= target) {
+        onStageComplete();
+        return;
+      }
+
+      const wordsExhausted = training.queue.length === 0 && isBoardEmpty();
+      if (wordsExhausted) {
+        stopTrainingAndStore('out_of_words');
+        return;
+      }
+
+      render();
+    }
+
+    function checkPair() {
+      const training = state.training;
+      const isCorrect = training.selectedLeftId === training.selectedRightId;
+      const left = training.leftCards.find((item) => item.id === training.selectedLeftId);
+      const right = training.rightCards.find((item) => item.id === training.selectedRightId);
+      if (!left || !right) return;
+
+      if (isCorrect) {
+        left.status = 'correct';
+        right.status = 'correct';
+        training.totalCorrect += 1;
+        training.stageCorrect += 1;
+        training.pendingMatchedIds.push(left.id);
+        clearPendingSelection();
+        beep('success');
+        render();
+
+        setTimeout(() => {
+          left.status = 'hidden';
+          right.status = 'hidden';
+          finalizeMatchedBatch();
+        }, 330);
+      } else {
+        left.status = 'incorrect';
+        right.status = 'incorrect';
+        training.wrongAttempts += 1;
+        beep('error');
+        render();
+        setTimeout(() => {
+          clearPendingSelection();
+          render();
+        }, 380);
+      }
+    }
+
+    function onStageComplete() {
+      state.training.paused = true;
+      const stageNumber = state.training.stageIndex + 1;
+      const spent = Math.round((Date.now() - state.training.stageStartTime) / 1000);
+      const target = state.settings.stageTargets[state.training.stageIndex];
+      const isLastStage = state.training.stageIndex >= state.settings.stageTargets.length - 1;
+
+      if (isLastStage) {
+        setTimeout(() => {
+          stopTrainingAndStore('completed');
+        }, 220);
+        return;
+      }
+
+      openModal({
+        type: 'stageComplete',
+        title: `Етап ${stageNumber} завершено`,
+        stats: {
+          'Відгадано': `${target} пар`,
+          'Час етапу': `${spent} с`,
+          'Залишок часу': formatTime(state.training.timeLeft),
+          'Усього правильно': `${state.training.totalCorrect}`,
+        },
+        onContinue: () => {
+          closeModal();
+          state.training.stageIndex += 1;
+          state.training.stageCorrect = 0;
+          state.training.stageStartTime = Date.now();
+          state.training.paused = false;
+          const allPairs = shuffle(groupPairs(state.training.groupId));
+          state.training.queue = allPairs;
+          seedBoard();
+          render();
+        },
+        onStop: () => {
+          closeModal();
+          stopTrainingAndStore('user_stop_after_stage');
+        },
+      });
+    }
+
+    function renderTopbar() {
+      const topbar = document.getElementById('topbar');
+      if (state.view === 'training' && state.training.running) {
+        const stageIndex = state.training.stageIndex;
+        const target = state.settings.stageTargets[stageIndex] || state.settings.stageTargets.at(-1) || 1;
+        const progress = Math.min(100, Math.round((state.training.stageCorrect / target) * 100));
+        topbar.innerHTML = `
+          <div class="row space-between">
+            <div>
+              <h1 class="title">Тренування</h1>
+              <div class="subtitle">Етап ${stageIndex + 1} із ${state.settings.stageTargets.length}</div>
+            </div>
+            <div class="timer">${formatTime(state.training.timeLeft)}</div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress"><div class="progress-bar" style="width:${progress}%"></div></div>
+            <div class="pill">${state.training.stageCorrect}/${target}</div>
+          </div>
+        `;
+      } else if (state.view === 'groupEditor') {
+        const currentGroup = state.groups.find((group) => group.id === state.ui.settingsGroupId);
+        topbar.innerHTML = `
+          <div class="page-header">
+            <div>
+              <h1 class="title">${currentGroup ? escapeHtml(currentGroup.name) : 'Група'}</h1>
+              <div class="subtitle">Редагування слів і назви групи</div>
+            </div>
+            <button class="btn secondary" id="backToSettingsBtn">Назад</button>
+          </div>
+        `;
+      } else {
+        const titles = {
+          training: 'Тренування',
+          results: 'Результати',
+          groups: 'Групи слів',
+          settings: 'Налаштування'
+        };
+        topbar.innerHTML = `
+          <div>
+            <h1 class="title">${titles[state.view] || 'Word Pairs Trainer'}</h1>
+            <div class="subtitle">Word Pairs Trainer</div>
+          </div>
+        `;
+      }
+    }
+
+    function renderTrainingView() {
+      if (!state.training.running) {
+        const selectedPairsCount = groupPairs(state.settings.selectedGroupId).length;
+        return `
+          <div class="stack">
+            <div class="panel stack">
+              <div>
+                <h2 class="section-title">Почати сесію</h2>
+                <div class="muted small">Обери групу слів і запускай таймер.</div>
+              </div>
+              <div class="form-field">
+                <label>Група слів</label>
+                <select id="selectedGroup">
+                  ${state.groups.map((group) => `<option value="${group.id}" ${group.id === state.settings.selectedGroupId ? 'selected' : ''}>${escapeHtml(group.name)} (${groupPairs(group.id).length})</option>`).join('')}
+                </select>
+              </div>
+              <div class="grid-2">
+                <div class="summary-card">
+                  <h3>${state.settings.stageTargets.join(' / ')}</h3>
+                  <p>Цілі етапів</p>
+                </div>
+                <div class="summary-card">
+                  <h3>${formatTime(state.settings.sessionSeconds)}</h3>
+                  <p>Тривалість сесії</p>
+                </div>
+              </div>
+              ${selectedPairsCount < 10 ? `<div class="banner">У вибраній групі зараз ${selectedPairsCount} пар. Для старту потрібно щонайменше 10.</div>` : ''}
+              <button class="btn" id="startTrainingBtn">Почати</button>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="stack">
+          <div class="panel stack">
+            <div class="row space-between">
+              <div class="pill">Група: ${escapeHtml((state.groups.find((group) => group.id === state.training.groupId) || {}).name || '')}</div>
+              <button class="btn secondary" id="finishNowBtn">Завершити</button>
+            </div>
+            <div class="word-grid">
+              <div class="word-col">
+                ${state.training.leftCards.map((card) => renderCard(card)).join('')}
+              </div>
+              <div class="word-col">
+                ${state.training.rightCards.map((card) => renderCard(card)).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="item">
+              <h3>${state.training.totalCorrect}</h3>
+              <p>Усього правильно</p>
+            </div>
+            <div class="item">
+              <h3>${state.training.wrongAttempts}</h3>
+              <p>Помилок</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCard(card) {
+      return `
+        <button class="card ${card.status}" data-card-side="${card.side}" data-card-id="${card.id}" ${card.status === 'hidden' ? 'disabled' : ''}>
+          ${escapeHtml(card.text)}
+        </button>
+      `;
+    }
+
+    function renderResultsView() {
+      if (!state.results.length) {
+        return `<div class="panel"><div class="empty">Ще немає жодного результату.</div></div>`;
+      }
+
+      const latest = state.results[0];
+      const best = getBestResultForGroup(latest.groupId) || latest;
+      const recordIsLatest = state.ui.lastRecordResultId === latest.id;
+      return `
+        <div class="stack">
+          ${recordIsLatest ? `
+            <div class="panel banner record-banner">
+              <strong>Новий рекорд!</strong><br />
+              ${escapeHtml(latest.groupNameSnapshot)} · ${new Date(latest.completedAt).toLocaleString('uk-UA')}
+            </div>
+          ` : ''}
+          <div class="panel stack best-result-panel">
+            <div>
+              <h2 class="section-title">Найкращий результат</h2>
+              <div class="muted small">${escapeHtml(best.groupNameSnapshot)}</div>
+              <div class="muted tiny">${new Date(best.completedAt).toLocaleString('uk-UA')}</div>
+            </div>
+            <div class="grid-2">
+              <div class="item">
+                <h3>${best.correctPairs}</h3>
+                <p>Найкращий результат</p>
+              </div>
+              <div class="item">
+                <h3>${best.accuracy}%</h3>
+                <p>Точність рекорду</p>
+              </div>
+              <div class="item">
+                <h3>${best.avgSecondsPerAnswer.toFixed(2)}</h3>
+                <p>Середня швидкість, с/відповідь</p>
+              </div>
+              <div class="item">
+                <h3>${formatTime(best.timeLeftSec)}</h3>
+                <p>Залишок часу</p>
+              </div>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="item">
+              <h3>${latest.correctPairs}</h3>
+              <p>Останній результат</p>
+            </div>
+            <div class="item">
+              <h3>${latest.accuracy}%</h3>
+              <p>Точність</p>
+            </div>
+          </div>
+          <div class="panel">
+            <h2 class="section-title">Всі результати</h2>
+            <div class="list">
+              ${state.results.map((result) => {
+                const itemBest = getBestResultForGroup(result.groupId, result.id);
+                const isRecord = result.correctPairs > 0 && (!itemBest || compareResults(result, itemBest) > 0);
+                return `
+                  <div class="item">
+                    <div class="row space-between">
+                      <h3>${escapeHtml(result.groupNameSnapshot)}</h3>
+                      <div class="pill">${result.correctPairs} пар</div>
+                    </div>
+                    <p>Етап: ${result.stageReached} · Точність: ${result.accuracy}% · Помилки: ${result.wrongAttempts}</p>
+                    <p>Середня швидкість: ${result.avgSecondsPerAnswer.toFixed(2)} с/відповідь</p>
+                    <p>${new Date(result.completedAt).toLocaleString('uk-UA')} · Час: ${result.timeSpentSec} с · Залишок: ${formatTime(result.timeLeftSec)}${result.endReason === 'out_of_words' ? ' · Слова закінчилися' : ''}</p>
+                    ${isRecord ? '<p style="color:#fde68a;font-weight:700;">🏆 Рекорд для цієї групи</p>' : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSettingsView() {
+      const minutes = Math.floor(state.settings.sessionSeconds / 60);
+      const seconds = state.settings.sessionSeconds % 60;
+      return `
+        <div class="stack">
+          <div class="panel settings-stack">
+            <div class="form-field">
+              <label>Тривалість сесії</label>
+              <div class="settings-inline-2">
+                <input id="sessionMinutesInput" type="number" min="0" max="59" value="${minutes}" placeholder="Хвилини" />
+                <input id="sessionSecondsInput" type="number" min="0" max="59" value="${seconds}" placeholder="Секунди" />
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Пар на етапі 1</label>
+              <input id="stage1Input" type="number" min="1" max="200" value="${state.settings.stageTargets[0]}" />
+            </div>
+            <div class="form-field">
+              <label>Пар на етапі 2</label>
+              <input id="stage2Input" type="number" min="1" max="200" value="${state.settings.stageTargets[1]}" />
+            </div>
+            <div class="form-field">
+              <label>Пар на етапі 3</label>
+              <input id="stage3Input" type="number" min="1" max="200" value="${state.settings.stageTargets[2]}" />
+            </div>
+            <div class="form-field">
+              <label>Звук</label>
+              <select id="soundEnabledSelect">
+                <option value="true" ${state.settings.soundEnabled ? 'selected' : ''}>Увімкнено</option>
+                <option value="false" ${!state.settings.soundEnabled ? 'selected' : ''}>Вимкнено</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderGroupsView() {
+      return `
+        <div class="stack">
+          <div class="panel stack">
+            <div class="row" style="justify-content:flex-end;">
+              <button class="btn secondary" id="addGroupBtn">+ Група</button>
+            </div>
+            <div class="list">
+              ${state.groups.map((group) => `
+                <div class="item">
+                  <div class="row space-between">
+                    <h3>${escapeHtml(group.name)}</h3>
+                    <div class="pill">${groupPairs(group.id).length} пар</div>
+                  </div>
+                  <div class="item-actions">
+                    <button class="btn secondary" data-action="open-group" data-group-id="${group.id}">Відкрити</button>
+                    <button class="btn danger" data-action="delete-group" data-group-id="${group.id}">Видалити</button>
+                  </div>
+                </div>
+              `).join('') || '<div class="empty">Створи першу групу.</div>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderGroupEditorView() {
+
+      const group = state.groups.find((item) => item.id === state.ui.settingsGroupId);
+      if (!group) {
+        state.view = 'settings';
+        return renderSettingsView();
+      }
+
+      const pairs = groupPairs(group.id);
+      return `
+        <div class="stack">
+          <div class="panel stack">
+            <div class="form-field">
+              <label>Назва групи</label>
+              <input id="groupNameInput" value="${escapeHtmlAttr(group.name)}" />
+            </div>
+            <div class="hr"></div>
+            <div class="grid-2">
+              <div class="form-field">
+                <label>Українське слово</label>
+                <input id="newUaInput" placeholder="Наприклад: кіт" />
+              </div>
+              <div class="form-field">
+                <label>Англійське слово</label>
+                <input id="newEnInput" placeholder="Наприклад: cat" />
+              </div>
+            </div>
+            <button class="btn" id="addPairBtn" data-group-id="${group.id}">Додати пару</button>
+          </div>
+
+          <div class="panel">
+            <div class="list">
+              ${pairs.map((pair) => `
+                <div class="item">
+                  <div class="item-head">
+                    <div class="item-content">
+                      <h3>${escapeHtml(pair.ua)} — ${escapeHtml(pair.en)}</h3>
+                      <p>Оновлено: ${new Date(pair.updatedAt).toLocaleString('uk-UA')}</p>
+                    </div>
+                    <div class="item-actions">
+                      <button class="btn secondary" data-action="edit-pair" data-pair-id="${pair.id}">Редагувати</button>
+                      <button class="btn danger" data-action="delete-pair" data-pair-id="${pair.id}">Видалити</button>
+                    </div>
+                  </div>
+                </div>
+              `).join('') || '<div class="empty">У цій групі ще немає слів.</div>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function iconMarkup(name) {
+      const icons = {
+        training: `
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="8"></circle>
+            <circle cx="12" cy="12" r="4"></circle>
+            <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"></circle>
+          </svg>
+        `,
+        results: `
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 20V11"></path>
+            <path d="M12 20V4"></path>
+            <path d="M19 20V8"></path>
+            <path d="M3 20h18"></path>
+          </svg>
+        `,
+        groups: `
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16"></path>
+            <path d="M4 12h16"></path>
+            <path d="M4 17h10"></path>
+          </svg>
+        `,
+        settings: `
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.55V21a2 2 0 0 1-4 0v-.09a1.7 1.7 0 0 0-1.04-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1.04H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.64 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.7 1.7 0 0 0 9 4.64a1.7 1.7 0 0 0 1.04-1.55V3a2 2 0 0 1 4 0v.09A1.7 1.7 0 0 0 15.1 4.64a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9c.2.49.67.83 1.19.89H21a2 2 0 0 1 0 4h-.09c-.52.06-.99.4-1.51 1.11Z"></path>
+          </svg>
+        `,
+        trophy: `
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 4h8v3a4 4 0 0 1-8 0Z"></path>
+            <path d="M6 5H4a2 2 0 0 0 2 5h1"></path>
+            <path d="M18 5h2a2 2 0 0 1-2 5h-1"></path>
+            <path d="M12 11v4"></path>
+            <path d="M9 21h6"></path>
+            <path d="M10 15h4l1 6H9l1-6Z"></path>
+          </svg>
+        `
+      };
+      return icons[name] || '';
+    }
+
+    function renderBottomNav() {
+      const nav = document.getElementById('bottomNav');
+      const currentView = state.view === 'groupEditor' ? 'groups' : state.view;
+      const items = [
+        { id: 'training', icon: 'training', label: 'Тренування' },
+        { id: 'results', icon: 'results', label: 'Результати' },
+        { id: 'groups', icon: 'groups', label: 'Групи слів' },
+        { id: 'settings', icon: 'settings', label: 'Налаштування' },
+      ];
+      nav.innerHTML = items.map((item) => `
+        <button class="nav-btn ${currentView === item.id ? 'active' : ''}" data-view="${item.id}">
+          <div class="icon">${iconMarkup(item.icon)}</div>
+          <div class="nav-label">${item.label}</div>
+        </button>
+      `).join('');
+    }
+
+    function renderModal() {
+      const backdrop = document.getElementById('modalBackdrop');
+      const modal = document.getElementById('modal');
+      if (!state.ui.modal) {
+        backdrop.classList.remove('open');
+        modal.className = 'modal';
+        modal.innerHTML = '';
+        return;
+      }
+      backdrop.classList.add('open');
+      const modalState = state.ui.modal;
+
+      if (modalState.type === 'stageComplete') {
+        modal.className = 'modal';
+        modal.innerHTML = `
+          <div class="stack">
+            <h2>${modalState.title}</h2>
+            <div class="muted small">Ти можеш продовжити або завершити сесію зараз.</div>
+            <div class="stat-grid">
+              ${Object.entries(modalState.stats).map(([k, v]) => `
+                <div class="stat"><div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div></div>
+              `).join('')}
+            </div>
+            <div class="grid-2">
+              <button class="btn secondary" id="modalStopBtn">Ні, завершити</button>
+              <button class="btn" id="modalContinueBtn">Так, продовжити</button>
+            </div>
+          </div>
+        `;
+        setTimeout(() => {
+          document.getElementById('modalContinueBtn')?.addEventListener('click', modalState.onContinue);
+          document.getElementById('modalStopBtn')?.addEventListener('click', modalState.onStop);
+        }, 0);
+        return;
+      }
+
+      if (modalState.type === 'recordCelebration') {
+        modal.className = 'modal record-modal';
+        modal.innerHTML = `
+          <div class="confetti">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <div class="stack" style="position:relative;">
+            <div class="record-badge">${iconMarkup('trophy')}</div>
+            <h2 style="text-align:center;">${escapeHtml(modalState.title)}</h2>
+            <div class="muted" style="text-align:center;">${escapeHtml(modalState.message)}</div>
+            <div class="stat-grid">
+              <div class="stat"><div class="k">Правильних пар</div><div class="v">${modalState.result.correctPairs}</div></div>
+              <div class="stat"><div class="k">Точність</div><div class="v">${modalState.result.accuracy}%</div></div>
+              <div class="stat"><div class="k">Середня швидкість</div><div class="v">${modalState.result.avgSecondsPerAnswer.toFixed(2)} с</div></div>
+              <div class="stat"><div class="k">Залишок часу</div><div class="v">${formatTime(modalState.result.timeLeftSec)}</div></div>
+            </div>
+            <button class="btn" id="recordModalCloseBtn">Круто!</button>
+          </div>
+        `;
+        setTimeout(() => {
+          document.getElementById('recordModalCloseBtn')?.addEventListener('click', closeModal);
+        }, 0);
+        return;
+      }
+
+      if (modalState.type === 'editPair') {
+        modal.className = 'modal';
+        modal.innerHTML = `
+          <div class="stack">
+            <h2>Редагування пари</h2>
+            <div class="form-field"><label>Українське слово</label><input id="editUaInput" value="${escapeHtmlAttr(modalState.pair.ua)}" /></div>
+            <div class="form-field"><label>Англійське слово</label><input id="editEnInput" value="${escapeHtmlAttr(modalState.pair.en)}" /></div>
+            <div class="grid-2">
+              <button class="btn secondary" id="closeEditPairBtn">Скасувати</button>
+              <button class="btn" id="saveEditPairBtn">Зберегти</button>
+            </div>
+          </div>
+        `;
+        setTimeout(() => {
+          document.getElementById('closeEditPairBtn')?.addEventListener('click', closeModal);
+          document.getElementById('saveEditPairBtn')?.addEventListener('click', () => {
+            const ua = document.getElementById('editUaInput').value.trim();
+            const en = document.getElementById('editEnInput').value.trim();
+            if (!ua || !en) return;
+            modalState.onSave(ua, en);
+            closeModal();
+          });
+        }, 0);
+        return;
+      }
+
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="stack">
+          <h2>${escapeHtml(modalState.title || 'Повідомлення')}</h2>
+          <div class="muted">${escapeHtml(modalState.message || '')}</div>
+          <button class="btn secondary" id="modalInfoCloseBtn">Ок</button>
+        </div>
+      `;
+      setTimeout(() => {
+        document.getElementById('modalInfoCloseBtn')?.addEventListener('click', () => {
+          if (modalState.actions?.[0]?.onClick) {
+            modalState.actions[0].onClick();
+          } else {
+            closeModal();
+          }
+        });
+      }, 0);
+    }
+
+    function render() {
+      ensureSelectedGroup();
+      renderTopbar();
+      renderBottomNav();
+      const main = document.getElementById('main');
+      if (state.view === 'training') {
+        main.innerHTML = renderTrainingView();
+      }
+      if (state.view === 'results') {
+        main.innerHTML = renderResultsView();
+      }
+      if (state.view === 'settings') {
+        main.innerHTML = renderSettingsView();
+      }
+      if (state.view === 'groups') {
+        main.innerHTML = renderGroupsView();
+      }
+      if (state.view === 'groupEditor') {
+        main.innerHTML = renderGroupEditorView();
+      }
+      renderModal();
+      bindEvents();
+    }
+
+    function bindEvents() {
+      document.querySelectorAll('[data-view]').forEach((button) => {
+        button.onclick = () => {
+          const view = button.dataset.view;
+          state.view = view;
+          saveAndRender();
+        };
+      });
+
+      document.getElementById('backToSettingsBtn')?.addEventListener('click', () => {
+        state.view = 'groups';
+        saveAndRender();
+      });
+
+      document.querySelectorAll('[data-card-side][data-card-id]').forEach((button) => {
+        button.onclick = () => handleCardClick(button.dataset.cardSide, button.dataset.cardId);
+      });
+
+      document.getElementById('selectedGroup')?.addEventListener('change', (event) => {
+        state.settings.selectedGroupId = event.target.value;
+        saveAndRender();
+      });
+
+      document.getElementById('startTrainingBtn')?.addEventListener('click', startTraining);
+      document.getElementById('finishNowBtn')?.addEventListener('click', () => stopTrainingAndStore('manual_finish'));
+
+      const applySessionSettings = () => {
+        const minutes = clampInt(document.getElementById('sessionMinutesInput')?.value, 0, 59, 2);
+        const seconds = clampInt(document.getElementById('sessionSecondsInput')?.value, 0, 59, 0);
+        const totalSeconds = Math.max(30, (minutes * 60) + seconds);
+        const stage1 = clampInt(document.getElementById('stage1Input')?.value, 1, 200, 15);
+        const stage2 = clampInt(document.getElementById('stage2Input')?.value, 1, 200, 20);
+        const stage3 = clampInt(document.getElementById('stage3Input')?.value, 1, 200, 25);
+        state.settings.sessionSeconds = totalSeconds;
+        state.settings.stageTargets = [stage1, stage2, stage3];
+        state.settings.soundEnabled = document.getElementById('soundEnabledSelect')?.value === 'true';
+        saveAndRender();
+      };
+
+      ['sessionMinutesInput', 'sessionSecondsInput', 'stage1Input', 'stage2Input', 'stage3Input'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('change', applySessionSettings);
+      });
+      document.getElementById('soundEnabledSelect')?.addEventListener('change', applySessionSettings);
+
+      document.getElementById('addGroupBtn')?.addEventListener('click', () => {
+        const name = prompt('Назва нової групи');
+        if (!name || !name.trim()) return;
+        const group = { id: crypto.randomUUID(), name: name.trim(), createdAt: Date.now(), updatedAt: Date.now() };
+        state.groups.unshift(group);
+        state.ui.settingsGroupId = group.id;
+        state.settings.selectedGroupId = group.id;
+        state.view = 'groupEditor';
+        saveAndRender();
+      });
+
+      document.querySelectorAll('[data-action="open-group"]').forEach((button) => {
+        button.onclick = () => {
+          state.ui.settingsGroupId = button.dataset.groupId;
+          state.view = 'groupEditor';
+          saveAndRender();
+        };
+      });
+
+      document.querySelectorAll('[data-action="delete-group"]').forEach((button) => {
+        button.onclick = () => {
+          const groupId = button.dataset.groupId;
+          const group = state.groups.find((item) => item.id === groupId);
+          if (!group) return;
+          const confirmed = confirm(`Видалити групу "${group.name}" і всі її слова?`);
+          if (!confirmed) return;
+          state.groups = state.groups.filter((item) => item.id !== groupId);
+          state.pairs = state.pairs.filter((item) => item.groupId !== groupId);
+          if (state.ui.settingsGroupId === groupId) state.ui.settingsGroupId = state.groups[0]?.id || null;
+          if (state.settings.selectedGroupId === groupId) state.settings.selectedGroupId = state.groups[0]?.id || null;
+          if (state.view === 'groupEditor') state.view = 'settings';
+          saveAndRender();
+        };
+      });
+
+      document.getElementById('groupNameInput')?.addEventListener('change', (event) => {
+        const name = event.target.value.trim();
+        const group = state.groups.find((item) => item.id === state.ui.settingsGroupId);
+        if (!group || !name) return;
+        group.name = name;
+        group.updatedAt = Date.now();
+        saveAndRender();
+      });
+
+      document.getElementById('addPairBtn')?.addEventListener('click', (event) => {
+        const groupId = event.target.dataset.groupId;
+        const uaInput = document.getElementById('newUaInput');
+        const enInput = document.getElementById('newEnInput');
+        const ua = uaInput.value.trim();
+        const en = enInput.value.trim();
+        if (!ua || !en) return;
+        const duplicate = state.pairs.some((pair) => pair.groupId === groupId && pair.ua.toLowerCase() === ua.toLowerCase() && pair.en.toLowerCase() === en.toLowerCase());
+        if (duplicate) {
+          openModal({ type: 'info', title: 'Дублікат', message: 'Така пара вже існує у цій групі.' });
+          return;
+        }
+        state.pairs.unshift({
+          id: crypto.randomUUID(), groupId, ua, en, createdAt: Date.now(), updatedAt: Date.now(), isActive: true,
+        });
+        uaInput.value = '';
+        enInput.value = '';
+        saveAndRender();
+      });
+
+      document.querySelectorAll('[data-action="delete-pair"]').forEach((button) => {
+        button.onclick = () => {
+          const pairId = button.dataset.pairId;
+          state.pairs = state.pairs.filter((pair) => pair.id !== pairId);
+          saveAndRender();
+        };
+      });
+
+      document.querySelectorAll('[data-action="edit-pair"]').forEach((button) => {
+        button.onclick = () => {
+          const pairId = button.dataset.pairId;
+          const pair = state.pairs.find((item) => item.id === pairId);
+          if (!pair) return;
+          openModal({
+            type: 'editPair',
+            pair,
+            onSave: (ua, en) => {
+              pair.ua = ua;
+              pair.en = en;
+              pair.updatedAt = Date.now();
+              saveAndRender();
+            },
+          });
+        };
+      });
+    }
+
+    function clampInt(value, min, max, fallback) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return fallback;
+      return Math.max(min, Math.min(max, Math.round(num)));
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeHtmlAttr(text) {
+      return escapeHtml(text).replace(/`/g, '&#096;');
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch((error) => {
+          console.error('SW registration failed', error);
+        });
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
