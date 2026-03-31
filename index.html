@@ -1626,7 +1626,10 @@
         training.pendingMatchedIds.length >= BATCH_REPLACEMENT_SIZE ||
         isBoardEmpty();
 
-      if (!shouldReplaceNow) return;
+        if (!shouldReplaceNow) {
+          render();
+          return;
+        }
 
       const matchedIds = [...training.pendingMatchedIds];
       refillBoard(matchedIds);
