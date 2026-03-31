@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
   <title>Word Pairs Trainer</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%2358cc02' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3Ccircle cx='12' cy='12' r='1.2' fill='%2358cc02' stroke='none'/%3E%3C/g%3E%3C/svg%3E" />
   <link rel="manifest" href="manifest.json" />
   <style>
     :root {
@@ -50,7 +51,8 @@
     }
 
     .topbar {
-      position: sticky;
+      position: fixed;
+      width: 100%;
       top: 0;
       z-index: 10;
       background: rgba(17, 24, 39, 0.95);
@@ -114,7 +116,7 @@
 
     main {
       flex: 1;
-      padding: 14px 16px 94px;
+      padding: 94px 16px;
     }
 
     .panel {
@@ -269,7 +271,6 @@
 
     .summary-card {
       border-radius: 18px;
-      background: #182536;
       border: 1px solid rgba(96, 165, 250, 0.18);
       padding: 14px;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
@@ -321,6 +322,107 @@
       background-size: 18px 18px;
       background-repeat: no-repeat;
       padding-right: 44px;
+    }
+
+    .custom-select {
+      position: relative;
+      width: 100%;
+    }
+
+    .custom-select-trigger {
+      width: 100%;
+      min-height: 48px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: #0f172a;
+      color: var(--text);
+      padding: 0 44px 0 14px;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      position: relative;
+      user-select: none;
+    }
+
+    .custom-select-trigger::after {
+      content: "";
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid #94a3b8;
+      border-bottom: 2px solid #94a3b8;
+      transform: translateY(-65%) rotate(45deg);
+      transition: transform 160ms ease;
+      pointer-events: none;
+    }
+
+    .custom-select.open .custom-select-trigger::after {
+      transform: translateY(-35%) rotate(225deg);
+    }
+
+    .custom-select-menu {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 8px);
+      background: #182536;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 14px;
+      box-shadow: 0 14px 28px rgba(0,0,0,0.25);
+      overflow: hidden;
+      z-index: 40;
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .custom-select.open .custom-select-menu {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .custom-select-option {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      color: var(--text);
+      cursor: pointer;
+      background: transparent;
+      transition: background-color 140ms ease;
+    }
+
+    .custom-select-option:hover,
+    .custom-select-option.active {
+      background: #243041;
+    }
+
+    .result-flash {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-flash::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -130%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.10), rgba(255,255,255,0.16), transparent);
+      transform: skewX(-22deg);
+      animation: result-shine 1.25s ease;
+      pointer-events: none;
+    }
+
+    @keyframes result-shine {
+      from { left: -130%; }
+      to { left: 150%; }
     }
 
     .bottom-nav {
@@ -410,7 +512,6 @@
     .best-result-panel .item,
     .best-result-panel .summary-card,
     .best-result-panel .stat {
-      background: rgba(11, 18, 32, 0.48);
       border-color: rgba(96, 165, 250, 0.16);
     }
 
@@ -608,6 +709,10 @@
 
     .page-header .btn {
       flex: 0 0 auto;
+    }
+
+    #trainingView {
+      margin-top: 40px;
     }
 
     @media (max-width: 480px) {
@@ -995,6 +1100,7 @@
               modal: null,
               settingsGroupId: parsed.ui?.settingsGroupId || null,
               lastRecordResultId: parsed.ui?.lastRecordResultId || null,
+              flashResultId: parsed.ui?.flashResultId || null,
             },
           };
         }
@@ -1013,7 +1119,7 @@
           selectedGroupId: defaultGroups[0].id,
         },
         training: createTrainingState(DEFAULT_SESSION_SECONDS),
-        ui: { modal: null, settingsGroupId: null, lastRecordResultId: null },
+        ui: { modal: null, settingsGroupId: null, lastRecordResultId: null, flashResultId: null },
       };
     }
 
@@ -1027,6 +1133,7 @@
         ui: {
           settingsGroupId: state.ui.settingsGroupId,
           lastRecordResultId: state.ui.lastRecordResultId,
+          flashResultId: state.ui.flashResultId,
         }
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -1051,6 +1158,8 @@
         groupId: null,
         paused: false,
         pendingMatchedIds: [],
+        activeElapsedMs: 0,
+        stageElapsedMs: 0,
       };
     }
 
@@ -1079,7 +1188,32 @@
       return state.pairs.filter((pair) => pair.groupId === groupId && pair.isActive);
     }
 
+    function ensureDefaultContent() {
+      const nameToGroup = new Map(state.groups.map((group) => [group.name, group]));
+      for (const defaultGroup of defaultGroups) {
+        if (!nameToGroup.has(defaultGroup.name)) {
+          state.groups.push({ ...defaultGroup });
+        }
+      }
+      const existingByGroupNameAndPair = new Set(
+        state.pairs.map((pair) => {
+          const group = state.groups.find((item) => item.id === pair.groupId);
+          return `${group?.name || ''}::${pair.ua.toLowerCase()}::${pair.en.toLowerCase()}`;
+        })
+      );
+      for (const pair of defaultPairs) {
+        const defaultGroup = defaultGroups.find((group) => group.id === pair.groupId);
+        const actualGroup = state.groups.find((group) => group.name === defaultGroup?.name);
+        const key = `${defaultGroup?.name || ''}::${pair.ua.toLowerCase()}::${pair.en.toLowerCase()}`;
+        if (actualGroup && !existingByGroupNameAndPair.has(key)) {
+          state.pairs.push({ ...pair, id: crypto.randomUUID(), groupId: actualGroup.id });
+          existingByGroupNameAndPair.add(key);
+        }
+      }
+    }
+
     function ensureSelectedGroup() {
+      ensureDefaultContent();
       if (!state.groups.some((group) => group.id === state.settings.selectedGroupId)) {
         state.settings.selectedGroupId = state.groups[0]?.id || null;
       }
@@ -1104,7 +1238,7 @@
       const gain = audioContext.createGain();
       oscillator.connect(gain);
       gain.connect(audioContext.destination);
-      oscillator.type = type === 'record' ? 'triangle' : 'sine';
+      oscillator.type = type === 'record' ? 'triangle' : (type === 'success' ? 'sine' : 'square');
 
       const start = audioContext.currentTime;
       if (type === 'success') {
@@ -1114,7 +1248,8 @@
         oscillator.frequency.exponentialRampToValueAtTime(880, start + 0.12);
         oscillator.frequency.exponentialRampToValueAtTime(1175, start + 0.28);
       } else {
-        oscillator.frequency.setValueAtTime(220, start);
+        oscillator.frequency.setValueAtTime(180, start);
+        oscillator.frequency.exponentialRampToValueAtTime(120, start + 0.12);
       }
 
       gain.gain.setValueAtTime(0.0001, start);
@@ -1122,6 +1257,19 @@
       gain.gain.exponentialRampToValueAtTime(0.0001, start + (type === 'record' ? 0.34 : type === 'success' ? 0.18 : 0.22));
       oscillator.start(start);
       oscillator.stop(start + (type === 'record' ? 0.36 : type === 'success' ? 0.2 : 0.24));
+    }
+
+
+    function triggerLatestResultFlash(resultId) {
+      state.ui.flashResultId = resultId;
+      saveAndRender();
+      setTimeout(() => {
+        if (state.ui.flashResultId === resultId) {
+          state.ui.flashResultId = null;
+          persistState();
+          render();
+        }
+      }, 1450);
     }
 
     function startTraining() {
@@ -1157,8 +1305,56 @@
         .sort((a, b) => compareResults(b, a))[0] || null;
     }
 
+    function getGlobalBestResult() {
+      return state.results
+        .slice()
+        .sort((a, b) => compareResults(b, a))[0] || null;
+    }
+
+
+    function getTrainingElapsedSeconds(training) {
+      const liveMs = training.startTime ? (Date.now() - training.startTime) : 0;
+      return Math.round((training.activeElapsedMs + liveMs) / 1000);
+    }
+
+    function getStageElapsedSeconds(training) {
+      const liveMs = training.stageStartTime ? (Date.now() - training.stageStartTime) : 0;
+      return Math.round((training.stageElapsedMs + liveMs) / 1000);
+    }
+
+    function pauseTrainingClock() {
+      if (!state.training.running || state.training.paused) return;
+      if (state.training.startTime) {
+        state.training.activeElapsedMs += Date.now() - state.training.startTime;
+        state.training.startTime = null;
+      }
+      if (state.training.stageStartTime) {
+        state.training.stageElapsedMs += Date.now() - state.training.stageStartTime;
+        state.training.stageStartTime = null;
+      }
+      state.training.paused = true;
+    }
+
+    function resumeTrainingClock(resetStage = false) {
+      if (!state.training.running) return;
+      if (!state.training.startTime) {
+        state.training.startTime = Date.now();
+      }
+      if (resetStage) {
+        state.training.stageElapsedMs = 0;
+      }
+      if (!state.training.stageStartTime) {
+        state.training.stageStartTime = Date.now();
+      }
+      state.training.paused = false;
+    }
+
+    function formatElapsedTime(seconds) {
+      return formatTime(seconds);
+    }
+
     function buildResult(training, reason = 'finished') {
-      const elapsed = training.startTime ? Math.round((Date.now() - training.startTime) / 1000) : 0;
+      const elapsed = getTrainingElapsedSeconds(training);
       const accuracy = training.totalCorrect + training.wrongAttempts > 0
         ? Math.round((training.totalCorrect / (training.totalCorrect + training.wrongAttempts)) * 100)
         : 0;
@@ -1215,6 +1411,21 @@
           title: 'Новий рекорд!',
           message: `Ти встановив новий рекорд у групі "${result.groupNameSnapshot}".`,
           result,
+          onClose: () => {
+            closeModal();
+            triggerLatestResultFlash(result.id);
+          },
+        });
+      } else {
+        beep('success');
+        openModal({
+          type: 'sessionComplete',
+          title: 'Сесію завершено',
+          result,
+          onClose: () => {
+            closeModal();
+            triggerLatestResultFlash(result.id);
+          },
         });
       }
     }
@@ -1266,6 +1477,12 @@
 
     function refillBoard(matchedIds = []) {
       if (!matchedIds.length) return;
+
+      const target = state.settings.stageTargets[state.training.stageIndex];
+      const currentVisibleCount = state.training.leftCards.filter((card) => card.status !== 'hidden').length;
+
+      let allowedNewPairs = Math.max(0, target - state.training.stageCorrect - currentVisibleCount);
+
       const leftReplacements = [];
       const rightReplacements = [];
 
@@ -1274,7 +1491,14 @@
         const rightIndex = state.training.rightCards.findIndex((card) => card.id === matchedId);
         if (leftIndex === -1 || rightIndex === -1) continue;
 
-        const nextPair = state.training.queue.shift() || null;
+        let nextPair = null;
+        if (allowedNewPairs > 0) {
+          nextPair = state.training.queue.shift() || null;
+          if (nextPair) {
+            allowedNewPairs -= 1;
+          }
+        }
+
         leftReplacements.push({ matchedId, index: leftIndex, pair: nextPair });
         rightReplacements.push({ matchedId, index: rightIndex, pair: nextPair });
       }
@@ -1299,8 +1523,11 @@
       }
 
       const pendingRightPairs = rightReplacements.filter((item) => item.pair).map((item) => item.pair);
-      const leftOrderIds = state.training.leftCards.map((card) => card.id);
-      const shuffledRightPairs = shuffleAvoidAligned(pendingRightPairs, rightReplacements.filter((item) => item.pair).map((item) => leftOrderIds[item.index]));
+      const shuffledRightPairs = shuffleAvoidAligned(
+        pendingRightPairs,
+        leftReplacements.filter((item) => item.pair).map((item) => item.pair.id),
+      );
+
       let rightPairIndex = 0;
 
       for (const replacement of rightReplacements) {
@@ -1391,18 +1618,19 @@
       const training = state.training;
       if (!training.pendingMatchedIds.length) return;
 
-      const boardIsEmptyBeforeRefill = isBoardEmpty();
+      const target = state.settings.stageTargets[training.stageIndex];
+      const remainingToTarget = Math.max(0, target - training.stageCorrect);
       const shouldReplaceNow =
         force ||
+        remainingToTarget <= BOARD_TARGET_SIZE ||
         training.pendingMatchedIds.length >= BATCH_REPLACEMENT_SIZE ||
-        boardIsEmptyBeforeRefill;
+        isBoardEmpty();
 
       if (!shouldReplaceNow) return;
 
       const matchedIds = [...training.pendingMatchedIds];
       refillBoard(matchedIds);
 
-      const target = state.settings.stageTargets[training.stageIndex];
       if (training.stageCorrect >= target) {
         onStageComplete();
         return;
@@ -1452,12 +1680,50 @@
       }
     }
 
+    function openStageCompleteModal(stageNumber, target, spent, stageAvgSpeed) {
+      openModal({
+        type: 'stageComplete',
+        title: `Етап ${stageNumber} завершено`,
+        stats: {
+          'Відгадано': `${target} пар`,
+          'Середня швидкість': `${stageAvgSpeed.toFixed(2)} с`,
+          'Час етапу': formatElapsedTime(spent),
+          'Залишок часу': formatTime(state.training.timeLeft),
+        },
+        onContinue: () => {
+          closeModal();
+          state.training.stageIndex += 1;
+          state.training.stageCorrect = 0;
+          const allPairs = shuffle(groupPairs(state.training.groupId));
+          state.training.queue = allPairs;
+          seedBoard();
+          resumeTrainingClock(true);
+          render();
+        },
+        onStop: () => {
+          openModal({
+            type: 'confirmStopAfterStage',
+            title: 'Точно завершити?',
+            message: 'У тебе ще є час. Завершити сесію зараз?',
+            onBack: () => {
+              openStageCompleteModal(stageNumber, target, spent, stageAvgSpeed);
+            },
+            onConfirm: () => {
+              closeModal();
+              stopTrainingAndStore('user_stop_after_stage');
+            },
+          });
+        },
+      });
+    }
+
     function onStageComplete() {
-      state.training.paused = true;
+      pauseTrainingClock();
       const stageNumber = state.training.stageIndex + 1;
-      const spent = Math.round((Date.now() - state.training.stageStartTime) / 1000);
+      const spent = getStageElapsedSeconds(state.training);
       const target = state.settings.stageTargets[state.training.stageIndex];
       const isLastStage = state.training.stageIndex >= state.settings.stageTargets.length - 1;
+      const stageAvgSpeed = target > 0 ? Number((spent / target).toFixed(2)) : 0;
 
       if (isLastStage) {
         setTimeout(() => {
@@ -1466,31 +1732,7 @@
         return;
       }
 
-      openModal({
-        type: 'stageComplete',
-        title: `Етап ${stageNumber} завершено`,
-        stats: {
-          'Відгадано': `${target} пар`,
-          'Час етапу': `${spent} с`,
-          'Залишок часу': formatTime(state.training.timeLeft),
-          'Усього правильно': `${state.training.totalCorrect}`,
-        },
-        onContinue: () => {
-          closeModal();
-          state.training.stageIndex += 1;
-          state.training.stageCorrect = 0;
-          state.training.stageStartTime = Date.now();
-          state.training.paused = false;
-          const allPairs = shuffle(groupPairs(state.training.groupId));
-          state.training.queue = allPairs;
-          seedBoard();
-          render();
-        },
-        onStop: () => {
-          closeModal();
-          stopTrainingAndStore('user_stop_after_stage');
-        },
-      });
+      openStageCompleteModal(stageNumber, target, spent, stageAvgSpeed);
     }
 
     function renderTopbar() {
@@ -1539,6 +1781,21 @@
       }
     }
 
+
+    function renderCustomSelect({ id, value, options }) {
+      const selected = options.find((item) => item.value === value) || options[0];
+      return `
+        <div class="custom-select" data-custom-select="${id}">
+          <div class="custom-select-trigger">${selected ? selected.label : ''}</div>
+          <div class="custom-select-menu">
+            ${options.map((item) => `
+              <div class="custom-select-option ${item.value === value ? 'active' : ''}" data-custom-select-option="${id}" data-value="${escapeHtmlAttr(item.value)}">${item.label}</div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
     function renderTrainingView() {
       if (!state.training.running) {
         const selectedPairsCount = groupPairs(state.settings.selectedGroupId).length;
@@ -1551,9 +1808,14 @@
               </div>
               <div class="form-field">
                 <label>Група слів</label>
-                <select id="selectedGroup">
-                  ${state.groups.map((group) => `<option value="${group.id}" ${group.id === state.settings.selectedGroupId ? 'selected' : ''}>${escapeHtml(group.name)} (${groupPairs(group.id).length})</option>`).join('')}
-                </select>
+                ${renderCustomSelect({
+                  id: 'selectedGroup',
+                  value: state.settings.selectedGroupId,
+                  options: state.groups.map((group) => ({
+                    value: group.id,
+                    label: `${escapeHtml(group.name)} (${groupPairs(group.id).length})`
+                  })),
+                })}
               </div>
               <div class="grid-2">
                 <div class="summary-card">
@@ -1573,10 +1835,10 @@
       }
 
       return `
-        <div class="stack">
+        <div class="stack" id="trainingView">
           <div class="panel stack">
             <div class="row space-between">
-              <div class="pill">Група: ${escapeHtml((state.groups.find((group) => group.id === state.training.groupId) || {}).name || '')}</div>
+              <h2 class="section-title">${escapeHtml((state.groups.find((group) => group.id === state.training.groupId) || {}).name || '')}</h2>
               <button class="btn secondary" id="finishNowBtn">Завершити</button>
             </div>
             <div class="word-grid">
@@ -1591,7 +1853,7 @@
           <div class="grid-2">
             <div class="item">
               <h3>${state.training.totalCorrect}</h3>
-              <p>Усього правильно</p>
+              <p>Правильних пар</p>
             </div>
             <div class="item">
               <h3>${state.training.wrongAttempts}</h3>
@@ -1616,7 +1878,7 @@
       }
 
       const latest = state.results[0];
-      const best = getBestResultForGroup(latest.groupId) || latest;
+      const best = getGlobalBestResult() || latest;
       const recordIsLatest = state.ui.lastRecordResultId === latest.id;
       return `
         <div class="stack">
@@ -1635,30 +1897,20 @@
             <div class="grid-2">
               <div class="item">
                 <h3>${best.correctPairs}</h3>
-                <p>Найкращий результат</p>
+                <p>Правильних пар</p>
               </div>
               <div class="item">
                 <h3>${best.accuracy}%</h3>
-                <p>Точність рекорду</p>
+                <p>Точність</p>
               </div>
               <div class="item">
-                <h3>${best.avgSecondsPerAnswer.toFixed(2)}</h3>
-                <p>Середня швидкість, с/відповідь</p>
+                <h3>${best.avgSecondsPerAnswer.toFixed(2)} с</h3>
+                <p>Середня швидкість</p>
               </div>
               <div class="item">
-                <h3>${formatTime(best.timeLeftSec)}</h3>
-                <p>Залишок часу</p>
+                <h3>${formatElapsedTime(best.timeSpentSec)}</h3>
+                <p>Час</p>
               </div>
-            </div>
-          </div>
-          <div class="grid-2">
-            <div class="item">
-              <h3>${latest.correctPairs}</h3>
-              <p>Останній результат</p>
-            </div>
-            <div class="item">
-              <h3>${latest.accuracy}%</h3>
-              <p>Точність</p>
             </div>
           </div>
           <div class="panel">
@@ -1667,15 +1919,16 @@
               ${state.results.map((result) => {
                 const itemBest = getBestResultForGroup(result.groupId, result.id);
                 const isRecord = result.correctPairs > 0 && (!itemBest || compareResults(result, itemBest) > 0);
+                const isFlash = state.ui.flashResultId === result.id;
                 return `
-                  <div class="item">
+                  <div class="item ${isFlash ? 'result-flash' : ''}">
                     <div class="row space-between">
                       <h3>${escapeHtml(result.groupNameSnapshot)}</h3>
                       <div class="pill">${result.correctPairs} пар</div>
                     </div>
-                    <p>Етап: ${result.stageReached} · Точність: ${result.accuracy}% · Помилки: ${result.wrongAttempts}</p>
+                    <p>Етап: ${result.stageReached} · Точність: ${result.accuracy}% · Помилки: ${result.wrongAttempts} · Час: ${formatElapsedTime(result.timeSpentSec)}</p>
                     <p>Середня швидкість: ${result.avgSecondsPerAnswer.toFixed(2)} с/відповідь</p>
-                    <p>${new Date(result.completedAt).toLocaleString('uk-UA')} · Час: ${result.timeSpentSec} с · Залишок: ${formatTime(result.timeLeftSec)}${result.endReason === 'out_of_words' ? ' · Слова закінчилися' : ''}</p>
+                    <p>${new Date(result.completedAt).toLocaleString('uk-UA')}${result.endReason === 'out_of_words' ? ' · Слова закінчилися' : ''}</p>
                     ${isRecord ? '<p style="color:#fde68a;font-weight:700;">🏆 Рекорд для цієї групи</p>' : ''}
                   </div>
                 `;
@@ -1713,10 +1966,14 @@
             </div>
             <div class="form-field">
               <label>Звук</label>
-              <select id="soundEnabledSelect">
-                <option value="true" ${state.settings.soundEnabled ? 'selected' : ''}>Увімкнено</option>
-                <option value="false" ${!state.settings.soundEnabled ? 'selected' : ''}>Вимкнено</option>
-              </select>
+              ${renderCustomSelect({
+                id: 'soundEnabledSelect',
+                value: String(state.settings.soundEnabled),
+                options: [
+                  { value: 'true', label: 'Увімкнено' },
+                  { value: 'false', label: 'Вимкнено' },
+                ],
+              })}
             </div>
           </div>
         </div>
@@ -1879,21 +2136,39 @@
         modal.innerHTML = `
           <div class="stack">
             <h2>${modalState.title}</h2>
-            <div class="muted small">Ти можеш продовжити або завершити сесію зараз.</div>
             <div class="stat-grid">
               ${Object.entries(modalState.stats).map(([k, v]) => `
                 <div class="stat"><div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div></div>
               `).join('')}
             </div>
             <div class="grid-2">
-              <button class="btn secondary" id="modalStopBtn">Ні, завершити</button>
-              <button class="btn" id="modalContinueBtn">Так, продовжити</button>
+              <button class="btn secondary" id="modalStopBtn">Завершити</button>
+              <button class="btn" id="modalContinueBtn">Продовжити</button>
             </div>
           </div>
         `;
         setTimeout(() => {
           document.getElementById('modalContinueBtn')?.addEventListener('click', modalState.onContinue);
           document.getElementById('modalStopBtn')?.addEventListener('click', modalState.onStop);
+        }, 0);
+        return;
+      }
+
+      if (modalState.type === 'confirmStopAfterStage') {
+        modal.className = 'modal';
+        modal.innerHTML = `
+          <div class="stack">
+            <h2>${escapeHtml(modalState.title)}</h2>
+            <div class="muted">${escapeHtml(modalState.message)}</div>
+            <div class="grid-2">
+              <button class="btn secondary" id="confirmStopBackBtn">Назад</button>
+              <button class="btn danger" id="confirmStopYesBtn">Так, завершити</button>
+            </div>
+          </div>
+        `;
+        setTimeout(() => {
+          document.getElementById('confirmStopBackBtn')?.addEventListener('click', modalState.onBack);
+          document.getElementById('confirmStopYesBtn')?.addEventListener('click', modalState.onConfirm);
         }, 0);
         return;
       }
@@ -1913,13 +2188,78 @@
               <div class="stat"><div class="k">Правильних пар</div><div class="v">${modalState.result.correctPairs}</div></div>
               <div class="stat"><div class="k">Точність</div><div class="v">${modalState.result.accuracy}%</div></div>
               <div class="stat"><div class="k">Середня швидкість</div><div class="v">${modalState.result.avgSecondsPerAnswer.toFixed(2)} с</div></div>
-              <div class="stat"><div class="k">Залишок часу</div><div class="v">${formatTime(modalState.result.timeLeftSec)}</div></div>
+              <div class="stat"><div class="k">Час</div><div class="v">${formatElapsedTime(modalState.result.timeSpentSec)}</div></div>
             </div>
             <button class="btn" id="recordModalCloseBtn">Круто!</button>
           </div>
         `;
         setTimeout(() => {
-          document.getElementById('recordModalCloseBtn')?.addEventListener('click', closeModal);
+          document.getElementById('recordModalCloseBtn')?.addEventListener('click', modalState.onClose || closeModal);
+        }, 0);
+        return;
+      }
+
+      if (modalState.type === 'sessionComplete') {
+        modal.className = 'modal';
+        modal.innerHTML = `
+          <div class="stack" style="position:relative;">
+            <div class="record-badge" style="background: radial-gradient(circle, rgba(88,204,2,0.20), rgba(21,128,61,0.12)); border-color: rgba(88,204,2,0.28); color:#a3e635;">${iconMarkup('training')}</div>
+            <h2 style="text-align:center;">${escapeHtml(modalState.title)}</h2>
+            <div class="stat-grid">
+              <div class="stat"><div class="k">Правильних пар</div><div class="v">${modalState.result.correctPairs}</div></div>
+              <div class="stat"><div class="k">Точність</div><div class="v">${modalState.result.accuracy}%</div></div>
+              <div class="stat"><div class="k">Середня швидкість</div><div class="v">${modalState.result.avgSecondsPerAnswer.toFixed(2)} с</div></div>
+              <div class="stat"><div class="k">Час</div><div class="v">${formatElapsedTime(modalState.result.timeSpentSec)}</div></div>
+            </div>
+            <button class="btn" id="sessionCompleteCloseBtn">Ок</button>
+          </div>
+        `;
+        setTimeout(() => {
+          document.getElementById('sessionCompleteCloseBtn')?.addEventListener('click', modalState.onClose || closeModal);
+        }, 0);
+        return;
+      }
+
+      if (modalState.type === 'confirmDelete') {
+        modal.className = 'modal';
+        modal.innerHTML = `
+          <div class="stack">
+            <h2>${escapeHtml(modalState.title)}</h2>
+            <div class="muted">${escapeHtml(modalState.message)}</div>
+            <div class="grid-2">
+              <button class="btn secondary" id="confirmDeleteBackBtn">Назад</button>
+              <button class="btn danger" id="confirmDeleteYesBtn">${escapeHtml(modalState.confirmLabel || 'Так, видалити')}</button>
+            </div>
+          </div>
+        `;
+        setTimeout(() => {
+          document.getElementById('confirmDeleteBackBtn')?.addEventListener('click', modalState.onBack || closeModal);
+          document.getElementById('confirmDeleteYesBtn')?.addEventListener('click', modalState.onConfirm);
+        }, 0);
+        return;
+      }
+
+      if (modalState.type === 'addGroup') {
+        modal.className = 'modal';
+        modal.innerHTML = `
+          <div class="stack">
+            <h2>Нова група</h2>
+            <input id="newGroupNameInput" placeholder="Назва групи" />
+            <div class="grid-2">
+              <button class="btn secondary" id="closeAddGroupBtn">Скасувати</button>
+              <button class="btn" id="saveAddGroupBtn">Створити</button>
+            </div>
+          </div>
+        `;
+        setTimeout(() => {
+          document.getElementById('closeAddGroupBtn')?.addEventListener('click', closeModal);
+          document.getElementById('saveAddGroupBtn')?.addEventListener('click', () => {
+            const input = document.getElementById('newGroupNameInput');
+            const name = input.value.trim();
+            if (!name) return;
+            modalState.onSave(name);
+            closeModal();
+          });
         }, 0);
         return;
       }
@@ -2011,9 +2351,34 @@
         button.onclick = () => handleCardClick(button.dataset.cardSide, button.dataset.cardId);
       });
 
-      document.getElementById('selectedGroup')?.addEventListener('change', (event) => {
-        state.settings.selectedGroupId = event.target.value;
-        saveAndRender();
+      document.querySelectorAll('[data-custom-select]').forEach((selectEl) => {
+        const id = selectEl.dataset.customSelect;
+        const trigger = selectEl.querySelector('.custom-select-trigger');
+        const options = selectEl.querySelectorAll('[data-custom-select-option]');
+        trigger?.addEventListener('click', (event) => {
+          event.stopPropagation();
+          document.querySelectorAll('[data-custom-select].open').forEach((item) => {
+            if (item !== selectEl) item.classList.remove('open');
+          });
+          selectEl.classList.toggle('open');
+        });
+        options.forEach((option) => {
+          option.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const value = option.dataset.value;
+            if (id === 'selectedGroup') {
+              state.settings.selectedGroupId = value;
+            }
+            if (id === 'soundEnabledSelect') {
+              state.settings.soundEnabled = value === 'true';
+            }
+            saveAndRender();
+          });
+        });
+      });
+
+      document.addEventListener('click', () => {
+        document.querySelectorAll('[data-custom-select].open').forEach((item) => item.classList.remove('open'));
       });
 
       document.getElementById('startTrainingBtn')?.addEventListener('click', startTraining);
@@ -2028,24 +2393,25 @@
         const stage3 = clampInt(document.getElementById('stage3Input')?.value, 1, 200, 25);
         state.settings.sessionSeconds = totalSeconds;
         state.settings.stageTargets = [stage1, stage2, stage3];
-        state.settings.soundEnabled = document.getElementById('soundEnabledSelect')?.value === 'true';
         saveAndRender();
       };
 
       ['sessionMinutesInput', 'sessionSecondsInput', 'stage1Input', 'stage2Input', 'stage3Input'].forEach((id) => {
         document.getElementById(id)?.addEventListener('change', applySessionSettings);
       });
-      document.getElementById('soundEnabledSelect')?.addEventListener('change', applySessionSettings);
 
       document.getElementById('addGroupBtn')?.addEventListener('click', () => {
-        const name = prompt('Назва нової групи');
-        if (!name || !name.trim()) return;
-        const group = { id: crypto.randomUUID(), name: name.trim(), createdAt: Date.now(), updatedAt: Date.now() };
-        state.groups.unshift(group);
-        state.ui.settingsGroupId = group.id;
-        state.settings.selectedGroupId = group.id;
-        state.view = 'groupEditor';
-        saveAndRender();
+        openModal({
+          type: 'addGroup',
+          onSave: (name) => {
+            const group = { id: crypto.randomUUID(), name: name.trim(), createdAt: Date.now(), updatedAt: Date.now() };
+            state.groups.unshift(group);
+            state.ui.settingsGroupId = group.id;
+            state.settings.selectedGroupId = group.id;
+            state.view = 'groupEditor';
+            saveAndRender();
+          },
+        });
       });
 
       document.querySelectorAll('[data-action="open-group"]').forEach((button) => {
@@ -2061,14 +2427,23 @@
           const groupId = button.dataset.groupId;
           const group = state.groups.find((item) => item.id === groupId);
           if (!group) return;
-          const confirmed = confirm(`Видалити групу "${group.name}" і всі її слова?`);
-          if (!confirmed) return;
-          state.groups = state.groups.filter((item) => item.id !== groupId);
-          state.pairs = state.pairs.filter((item) => item.groupId !== groupId);
-          if (state.ui.settingsGroupId === groupId) state.ui.settingsGroupId = state.groups[0]?.id || null;
-          if (state.settings.selectedGroupId === groupId) state.settings.selectedGroupId = state.groups[0]?.id || null;
-          if (state.view === 'groupEditor') state.view = 'settings';
-          saveAndRender();
+
+          openModal({
+            type: 'confirmDelete',
+            title: 'Видалити групу?',
+            message: `Всі слова групи "${group.name}" теж будуть видалені.`,
+            confirmLabel: 'Так, видалити',
+            onBack: closeModal,
+            onConfirm: () => {
+              closeModal();
+              state.groups = state.groups.filter((item) => item.id !== groupId);
+              state.pairs = state.pairs.filter((item) => item.groupId !== groupId);
+              if (state.ui.settingsGroupId === groupId) state.ui.settingsGroupId = state.groups[0]?.id || null;
+              if (state.settings.selectedGroupId === groupId) state.settings.selectedGroupId = state.groups[0]?.id || null;
+              if (state.view === 'groupEditor') state.view = 'groups';
+              saveAndRender();
+            },
+          });
         };
       });
 
@@ -2104,8 +2479,21 @@
       document.querySelectorAll('[data-action="delete-pair"]').forEach((button) => {
         button.onclick = () => {
           const pairId = button.dataset.pairId;
-          state.pairs = state.pairs.filter((pair) => pair.id !== pairId);
-          saveAndRender();
+          const pair = state.pairs.find((item) => item.id === pairId);
+          if (!pair) return;
+
+          openModal({
+            type: 'confirmDelete',
+            title: 'Видалити пару?',
+            message: `Пара "${pair.ua} — ${pair.en}" буде видалена.`,
+            confirmLabel: 'Так, видалити',
+            onBack: closeModal,
+            onConfirm: () => {
+              closeModal();
+              state.pairs = state.pairs.filter((item) => item.id !== pairId);
+              saveAndRender();
+            },
+          });
         };
       });
 
